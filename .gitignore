@@ -1,4 +1,3 @@
-.idea
 bin
 dist
 logs
@@ -8,10 +7,26 @@ target
 *.iml*
 *.log
 *.sublime
-.cache
 .classpath
 .history
 .idea*
 .project
 .settings
-.target
+*.class
+*.log
+
+# sbt specific
+.cache
+.history
+.lib/
+dist/*
+target/
+lib_managed/
+src_managed/
+project/boot/
+project/plugins/project/
+
+# Scala-IDE specific
+.scala_dependencies
+.worksheet
+
