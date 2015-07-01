@@ -1,0 +1,24 @@
+<html>
+<head>
+
+  <script type="text/javascript" src="js/autobahn.js"></script>
+</head>
+<body>
+  <script>
+    var connection = new autobahn.Connection({
+      url: 'ws://localhost:9090/ws-greeter',
+      realm: 'realm1'
+    });
+
+    connection.onopen = function (session) {
+      console.log("session open")
+    }
+
+    connection.open()
+
+
+  </script>
+</body>
+
+
+</html>

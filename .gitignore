@@ -1,0 +1,17 @@
+.idea
+bin
+dist
+logs
+project/project
+project/target
+target
+*.iml*
+*.log
+*.sublime
+.cache
+.classpath
+.history
+.idea*
+.project
+.settings
+.target
