@@ -9,27 +9,34 @@ import play.api.libs.json.{Json, JsArray}
 /**
  * Created by goldv on 7/1/2015.
  */
-class JsonSessionActor(sourceActor: ActorRef) extends Actor with ActorLogging{
+class JsonSessionActor(sourceActor: ActorRef, subscriptionActor: ActorRef) extends Actor with ActorLogging{
 
   val parser = new JsonMessageParser
   var protocolActor: ActorRef = _
 
   override def preStart = {
-    protocolActor = context.system.actorOf( WAMPProtocolActor.props(self))
+    protocolActor = context.system.actorOf( WAMPProtocolActor.props(self, subscriptionActor))
   }
 
   def receive: Receive = {
     case js: JsArray => parser.parse(js) match{
-      case Right(message) => protocolActor ! message
+      case Right(message) =>
+        log.info(s"-> $message")
+        protocolActor ! message
       case Left(err) => log.error(err)
     }
-    case JsonSessionActor.ConnectionClosed => log.info(s"connection closed")
-    case m:WAMPMessage => sourceActor ! TextMessage( parser.write(m).toString() )
+    case JsonSessionActor.ConnectionClosed =>
+      log.info(s"connection closed")
+      // TODO terminate protocol actor
+    case m:WAMPMessage =>
+      val outMessage = parser.write(m).toString()
+      log.info(s"<- $outMessage")
+      sourceActor ! TextMessage( outMessage )
   }
 }
 
 object JsonSessionActor{
   case object ConnectionClosed
 
-  def props(sourceActor: ActorRef) = Props( new JsonSessionActor(sourceActor) )
+  def props(sourceActor: ActorRef, subscriptionActor: ActorRef) = Props( new JsonSessionActor(sourceActor, subscriptionActor) )
 }

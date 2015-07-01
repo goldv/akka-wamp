@@ -1,6 +1,6 @@
 package org.goldv.wampserver.message
 
-import org.goldv.wampserver.message.Messages.{Role, Welcome, Hello, WAMPMessage}
+import org.goldv.wampserver.message.Messages._
 import play.api.libs.json._
 
 /**
@@ -23,18 +23,20 @@ class JsonMessageParser extends MessageParser[JsArray] {
 
     result match{
       case JsSuccess(message, _) => Right(message)
-      case JsError(err) => Left("Unable to retrieve message type id from")
+      case JsError(err) => Left(s"Unable to retrieve message type id from ${arr} error: ${err}")
     }
   }
 
   def write(msg: WAMPMessage) = msg match{
     case m:Welcome => Json.toJson(m).as[JsArray]
+    case s:Subscribed => Json.toJson(s).as[JsArray]
     case _ => JsArray()
   }
 
   def parseType(messageType: Int, arr: JsArray): JsResult[WAMPMessage] = messageType match{
     case Messages.HELLO_TYPE => parseHello(arr)
     case Messages.WELCOME_TYPE => parseWelcome(arr)
+    case Messages.SUBSCRIBE_TYPE => parseSubscribe(arr)
     case _ => JsError("Unknown message type")
   }
 
@@ -44,12 +46,17 @@ class JsonMessageParser extends MessageParser[JsArray] {
     roles <- parseRoles(details)
   } yield Hello(realm.value, roles)
 
+  def parseSubscribe(arr: JsArray) = for{
+    subscriptionId <- arr.transform[JsNumber](__(1).json.pick[JsNumber])
+    options <- arr.transform[JsObject](__(2).json.pick[JsObject]) // ignoring for now
+    topic <- arr.transform[JsString](__(3).json.pick[JsString])
+  } yield Subscribe(subscriptionId.value.toLongExact, topic.value.toString)
 
   def parseWelcome(arr: JsArray): JsResult[Welcome] =  for{
     session <- arr.transform[JsNumber]( __(1).json.pick[JsNumber] )
     details <- arr.transform[JsObject]( __(2).json.pick[JsObject] )
     roles <- parseRoles(details)
-  } yield Welcome(session.value.intValue(), roles)
+  } yield Welcome(session.value.toLongExact, roles)
 
 
   def parseRoles(obj: JsObject): JsResult[List[Role]] = for {
@@ -62,7 +69,6 @@ class JsonMessageParser extends MessageParser[JsArray] {
     case JsSuccess(features, _ ) => features.value.collect{ case (feature: String, JsBoolean(true)) => feature}.toSet
     case JsError(err) => Set.empty[String]
   }
-
 }
 
 object JsonMessageParser{
@@ -85,4 +91,7 @@ object JsonMessageParser{
     }
   }
 
+  implicit val subscribedWrites: Writes[Subscribed] = new Writes[Subscribed] {
+    override def writes(s: Subscribed): JsValue = JsArray( Seq(JsNumber(Messages.SUBSCRIBED_TYPE), JsNumber(s.subscriptionId), JsNumber(s.brokerId) ) )
+  }
 }

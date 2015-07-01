@@ -1,18 +1,16 @@
 package org.goldv.wampserver.server
 
-import java.util.logging.Logger
-
-import akka.actor.ActorSystem
+import akka.actor.{ActorSystem, Props}
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.ws.{TextMessage, UpgradeToWebsocket, Message}
+import akka.http.scaladsl.model.ws.{Message, TextMessage, UpgradeToWebsocket}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{ExpectedWebsocketRequestRejection, Route}
-import akka.stream.{OverflowStrategy, ActorMaterializer}
 import akka.stream.scaladsl._
+import akka.stream.{ActorMaterializer, OverflowStrategy}
 import org.goldv.wampserver.protocol.JsonSessionActor
 import org.goldv.wampserver.protocol.JsonSessionActor.ConnectionClosed
 import org.slf4j.LoggerFactory
-import play.api.libs.json.{JsSuccess, JsArray, Json}
+import play.api.libs.json.{JsArray, JsSuccess, Json}
 
 /**
  * Created by goldv on 7/1/2015.
@@ -25,6 +23,8 @@ class WAMPServer(host: String, port: Int, wsPath: String, route: Option[Route] =
   implicit val materializer = ActorMaterializer()
 
   import system.dispatcher
+
+  val subscriptionActor = system.actorOf(Props[WAMPSubscriptionActor])
 
   val wsRoute =  path(wsPath) {
     get {
@@ -43,7 +43,7 @@ class WAMPServer(host: String, port: Int, wsPath: String, route: Option[Route] =
     val (sourceActor, publisher) =  Source.actorRef[Message](1, OverflowStrategy.fail).toMat(Sink.publisher)(Keep.both).run()
     val outSource = Source(publisher)
 
-    val sessionActor = system.actorOf( JsonSessionActor.props(sourceActor))
+    val sessionActor = system.actorOf( JsonSessionActor.props(sourceActor, subscriptionActor))
 
     val sink =  Flow[Message]
       .collect{ case TextMessage.Strict(msg) => Json.fromJson[JsArray](Json.parse(msg)) }

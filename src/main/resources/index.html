@@ -12,6 +12,10 @@
 
     connection.onopen = function (session) {
       console.log("session open")
+
+      session.subscribe('com.myapp.hello', function(event){
+        console.log("event received " + event)
+      });
     }
 
     connection.open()

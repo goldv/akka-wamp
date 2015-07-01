@@ -1,24 +1,38 @@
 package org.goldv.wampserver.protocol
 
 import akka.actor.{Props, ActorRef, Actor}
-import org.goldv.wampserver.message.Messages.{Role, Welcome, Hello}
+import org.goldv.wampserver.message.Messages._
 import scala.util.Random
 
 /**
  * Created by goldv on 7/1/2015.
  */
-class WAMPProtocolActor(source: ActorRef) extends Actor with akka.actor.ActorLogging {
+class WAMPProtocolActor(source: ActorRef,  subscriptionActor: ActorRef) extends Actor with akka.actor.ActorLogging {
 
   var realm: Option[String] = None
   var sessionId: Option[Int] = None
+
+  var subscriptions = Map.empty[String, Subscribe]
 
   val rdm = new Random()
 
   def receive = {
     case h: Hello => handleHello(h)
-    case _ => // ToDO return error
+    case s: Subscribe => handleSubscribe(s)
+    case s: Subscribed => handleSubscribed(s)
+    case m => log.error(s"received unhandled message $m ignoring")
   }
 
+  def handleSubscribed(s: Subscribed) = source ! s
+
+  def handleSubscribe(s: Subscribe) = {
+    if(!subscriptions.contains(s.topic)){
+      subscriptionActor ! s
+    } else {
+      log.warning(s"attempt to subscribe for pre-existing topic ${s.topic}")
+      // TODO return error
+    }
+  }
 
   def handleHello(h: Hello) = if(realm.isEmpty){
     realm = Some(h.realm)
@@ -32,5 +46,5 @@ class WAMPProtocolActor(source: ActorRef) extends Actor with akka.actor.ActorLog
 }
 
 object WAMPProtocolActor{
-  def props(sourceActor: ActorRef) = Props( new WAMPProtocolActor(sourceActor) )
+  def props(sourceActor: ActorRef, subscriptionActor: ActorRef) = Props( new WAMPProtocolActor(sourceActor, subscriptionActor) )
 }
