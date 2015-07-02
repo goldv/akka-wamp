@@ -15,7 +15,7 @@ class JsonSessionActor(sourceActor: ActorRef, subscriptionActor: ActorRef) exten
   var protocolActor: ActorRef = _
 
   override def preStart = {
-    protocolActor = context.system.actorOf( WAMPProtocolActor.props(self, subscriptionActor))
+    protocolActor = context.system.actorOf( ProtocolActor.props(self, subscriptionActor))
   }
 
   def receive: Receive = {

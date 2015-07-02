@@ -1,6 +1,6 @@
 package org.goldv.wampserver.server
 
-import akka.actor.{ActorSystem, Props}
+import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.ws.{Message, TextMessage, UpgradeToWebsocket}
 import akka.http.scaladsl.server.Directives._
@@ -15,31 +15,38 @@ import play.api.libs.json.{JsArray, JsSuccess, Json}
 /**
  * Created by goldv on 7/1/2015.
  */
-class WAMPServer(host: String, port: Int, wsPath: String, route: Option[Route] = None) {
+case class PublisherContainer[T](publisher: WAMPPublisher[T], writer: play.api.libs.json.Writes[T])
+
+class WAMPServer(host: String, port: Int, wsPath: String, route: Option[Route] = None, publishers: List[PublisherContainer[_]]) {
 
   val log = LoggerFactory.getLogger(classOf[WAMPServer])
 
-  implicit val system = ActorSystem()
-  implicit val materializer = ActorMaterializer()
-
-  import system.dispatcher
-
-  val subscriptionActor = system.actorOf(Props[WAMPSubscriptionActor])
-
-  val wsRoute =  path(wsPath) {
-    get {
-      (handleWebsocketMessagesWithSyncSource _).tupled(createSinkSource)
-    }
-  }
+  def register[T](publisher: WAMPPublisher[T], writer : play.api.libs.json.Writes[T]) = WAMPServer(host, port, wsPath, route, PublisherContainer[T](publisher, writer) :: publishers)
 
   def bind() = {
+    implicit val system = ActorSystem()
+    implicit val materializer = ActorMaterializer()
+    import system.dispatcher
+
+    // start the subscription dispatch actor, serves as a stateless router for subscription requests
+    val subscriptionActor = system.actorOf(Props[SubscriptionDispatchActor])
+
+    // start actor for each registered publisher
+    publishers.foreach( p => system.actorOf( PublisherActor(p, subscriptionActor)))
+
+    val wsRoute =  path(wsPath) {
+      get {
+        (handleWebsocketMessagesWithSyncSource _).tupled(createSinkSource(subscriptionActor))
+      }
+    }
+
     val finalRoute = route.foldRight(wsRoute)( _ ~ _ )
     Http().bindAndHandle(finalRoute, host, port).map{ serverBinding =>
       () => serverBinding.unbind().onComplete( _ => system.shutdown() )
     }
   }
 
-  def createSinkSource = {
+  def createSinkSource(subscriptionActor: ActorRef)(implicit system: ActorSystem, materializer: ActorMaterializer) = {
     val (sourceActor, publisher) =  Source.actorRef[Message](1, OverflowStrategy.fail).toMat(Sink.publisher)(Keep.both).run()
     val outSource = Source(publisher)
 
@@ -59,4 +66,8 @@ class WAMPServer(host: String, port: Int, wsPath: String, route: Option[Route] =
       case None => reject(ExpectedWebsocketRequestRejection)
     }
 
+}
+
+object WAMPServer{
+  def apply(host: String, port: Int, wsPath: String, route: Option[Route] = None, publishers: List[PublisherContainer[_]] = Nil) = new WAMPServer(host, port, wsPath, route, publishers)
 }
