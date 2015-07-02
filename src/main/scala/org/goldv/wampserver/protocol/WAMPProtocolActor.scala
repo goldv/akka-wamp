@@ -2,6 +2,7 @@ package org.goldv.wampserver.protocol
 
 import akka.actor.{Props, ActorRef, Actor}
 import org.goldv.wampserver.message.Messages._
+import org.goldv.wampserver.server.WAMPSubscriptionActor
 import scala.util.Random
 
 /**
@@ -12,8 +13,6 @@ class WAMPProtocolActor(source: ActorRef,  subscriptionActor: ActorRef) extends 
   var realm: Option[String] = None
   var sessionId: Option[Int] = None
 
-  var subscriptions = Map.empty[String, Subscribe]
-
   val rdm = new Random()
 
   def receive = {
@@ -23,16 +22,11 @@ class WAMPProtocolActor(source: ActorRef,  subscriptionActor: ActorRef) extends 
     case m => log.error(s"received unhandled message $m ignoring")
   }
 
+  override def preStart = subscriptionActor ! WAMPSubscriptionActor.Register( sessionId.getOrElse(0) )
+
   def handleSubscribed(s: Subscribed) = source ! s
 
-  def handleSubscribe(s: Subscribe) = {
-    if(!subscriptions.contains(s.topic)){
-      subscriptionActor ! s
-    } else {
-      log.warning(s"attempt to subscribe for pre-existing topic ${s.topic}")
-      // TODO return error
-    }
-  }
+  def handleSubscribe(s: Subscribe) = subscriptionActor ! s
 
   def handleHello(h: Hello) = if(realm.isEmpty){
     realm = Some(h.realm)

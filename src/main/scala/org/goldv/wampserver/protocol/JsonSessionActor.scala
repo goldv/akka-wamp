@@ -1,6 +1,6 @@
 package org.goldv.wampserver.protocol
 
-import akka.actor.{ActorLogging, Props, ActorRef, Actor}
+import akka.actor._
 import akka.http.scaladsl.model.ws.TextMessage
 import org.goldv.wampserver.message.JsonMessageParser
 import org.goldv.wampserver.message.Messages.WAMPMessage
@@ -25,9 +25,7 @@ class JsonSessionActor(sourceActor: ActorRef, subscriptionActor: ActorRef) exten
         protocolActor ! message
       case Left(err) => log.error(err)
     }
-    case JsonSessionActor.ConnectionClosed =>
-      log.info(s"connection closed")
-      // TODO terminate protocol actor
+    case JsonSessionActor.ConnectionClosed => protocolActor ! PoisonPill
     case m:WAMPMessage =>
       val outMessage = parser.write(m).toString()
       log.info(s"<- $outMessage")

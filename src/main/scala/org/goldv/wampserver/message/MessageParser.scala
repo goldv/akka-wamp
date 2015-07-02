@@ -37,6 +37,7 @@ class JsonMessageParser extends MessageParser[JsArray] {
     case Messages.HELLO_TYPE => parseHello(arr)
     case Messages.WELCOME_TYPE => parseWelcome(arr)
     case Messages.SUBSCRIBE_TYPE => parseSubscribe(arr)
+    case Messages.UNSUBSCRIBE_TYPE => parseUnsubscribe(arr)
     case _ => JsError("Unknown message type")
   }
 
@@ -51,6 +52,11 @@ class JsonMessageParser extends MessageParser[JsArray] {
     options <- arr.transform[JsObject](__(2).json.pick[JsObject]) // ignoring for now
     topic <- arr.transform[JsString](__(3).json.pick[JsString])
   } yield Subscribe(subscriptionId.value.toLongExact, topic.value.toString)
+
+  def parseUnsubscribe(arr: JsArray) = for{
+    id <- arr.transform[JsNumber](__(1).json.pick[JsNumber])
+    subId <- arr.transform[JsNumber](__(2).json.pick[JsNumber])
+  } yield Unsubscribe(id.value.toLong, subId.value.toLong)
 
   def parseWelcome(arr: JsArray): JsResult[Welcome] =  for{
     session <- arr.transform[JsNumber]( __(1).json.pick[JsNumber] )
@@ -92,6 +98,10 @@ object JsonMessageParser{
   }
 
   implicit val subscribedWrites: Writes[Subscribed] = new Writes[Subscribed] {
-    override def writes(s: Subscribed): JsValue = JsArray( Seq(JsNumber(Messages.SUBSCRIBED_TYPE), JsNumber(s.subscriptionId), JsNumber(s.brokerId) ) )
+    override def writes(s: Subscribed): JsValue = JsArray( Seq(JsNumber(Messages.SUBSCRIBED_TYPE), JsNumber(s.id), JsNumber(s.brokerId) ) )
+  }
+
+  implicit val unsubscribedWrites: Writes[Unsubscribed] = new Writes[Unsubscribed] {
+    override def writes(u: Unsubscribed): JsValue = JsArray( Seq(JsNumber(Messages.UNSUBSCRIBED_TYPE), JsNumber(u.id)))
   }
 }
