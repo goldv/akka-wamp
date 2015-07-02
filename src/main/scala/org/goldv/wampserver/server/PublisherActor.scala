@@ -18,7 +18,6 @@ class PublisherActor[T](publish: PublisherContainer[T], subscriptionDispatcher: 
   var subscriptions = SubscriptionContainer()
 
   def receive = {
-    case event: T =>
     case sr: SubscribeRegistration =>
       val subscribed = handleSubscribe(sr)
       context.watch(sr.source)

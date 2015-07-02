@@ -15,7 +15,11 @@ import play.api.libs.json.{JsArray, JsSuccess, Json}
 /**
  * Created by goldv on 7/1/2015.
  */
-case class PublisherContainer[T](publisher: WAMPPublisher[T], writer: play.api.libs.json.Writes[T])
+case class PublisherContainer[T](publisher: WAMPPublisher[T], writer: play.api.libs.json.Writes[T]){
+  def newSubscription(source: ActorRef, topic: String) = {
+
+  }
+}
 
 class WAMPServer(host: String, port: Int, wsPath: String, route: Option[Route] = None, publishers: List[PublisherContainer[_]]) {
 
