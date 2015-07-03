@@ -1,4 +1,5 @@
 import akka.http.scaladsl.server.Directives
+import com.typesafe.config.ConfigFactory
 import org.goldv.wampserver.server._
 import play.api.libs.json.Json
 
@@ -38,7 +39,13 @@ object Server extends App{
     }
   }
 
-  val server = new WAMPServer("localhost", 9090, "ws-greeter", Some(route), Nil).register( publisher, testWrites )
+  val config = """
+    |akka {
+    |
+    |}
+  """.stripMargin
+
+  val server = new WAMPServer("localhost", 9090, "ws-greeter", Some(route), Nil, ConfigFactory.parseString(config)).register( publisher, testWrites )
   val bindingFuture = server.bind
 
   println(s"Server online at http://localhost:8080/\nPress RETURN to stop...")

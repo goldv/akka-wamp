@@ -31,6 +31,7 @@ class JsonMessageParser extends MessageParser[JsArray] {
     case m:Welcome => Json.toJson(m).as[JsArray]
     case s:Subscribed => Json.toJson(s).as[JsArray]
     case e:Event => Json.toJson(e).as[JsArray]
+    case g:Goodbye => Json.toJson(g).as[JsArray]
     case _ => JsArray()
   }
 
@@ -39,6 +40,7 @@ class JsonMessageParser extends MessageParser[JsArray] {
     case Messages.WELCOME_TYPE => parseWelcome(arr)
     case Messages.SUBSCRIBE_TYPE => parseSubscribe(arr)
     case Messages.UNSUBSCRIBE_TYPE => parseUnsubscribe(arr)
+    case Messages.GOODBYE_TYPE => parseGoodbye(arr)
     case _ => JsError("Unknown message type")
   }
 
@@ -47,6 +49,10 @@ class JsonMessageParser extends MessageParser[JsArray] {
     details <- arr.transform[JsObject]( __(2).json.pick[JsObject] )
     roles <- parseRoles(details)
   } yield Hello(realm.value, roles)
+
+  def parseGoodbye(arr: JsArray): JsResult[Goodbye] = for{
+    reason <- arr.transform[JsString]( __(2).json.pick[JsString] )
+  } yield Goodbye(reason.value)
 
   def parseSubscribe(arr: JsArray) = for{
     subscriptionId <- arr.transform[JsNumber](__(1).json.pick[JsNumber])
@@ -108,5 +114,9 @@ object JsonMessageParser{
 
   implicit val eventWrites: Writes[Event] = new Writes[Event]{
     override def writes(e: Event): JsValue = JsArray( Seq(JsNumber(Messages.EVENT_TYPE), JsNumber(e.subId), JsNumber(e.pubId), Json.obj(), e.payload ))
+  }
+
+  implicit val goodbyeWrites: Writes[Goodbye] = new Writes[Goodbye]{
+    override def writes(g: Goodbye): JsValue = JsArray( Seq(JsNumber(Messages.GOODBYE_TYPE), Json.obj(), JsString(g.reason) ) )
   }
 }

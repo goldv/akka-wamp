@@ -30,6 +30,7 @@
         <!-- To use this, you will need org.codehaus.janino:janino library in the classpath -->
         <appender-ref ref="stdout"/>
     </root>
+    <logger name="akka.stream.ws" level="DEBUG"/>
 
 
 </configuration>

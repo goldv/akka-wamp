@@ -1,8 +1,7 @@
 package org.goldv.wampserver.protocol
 
-import akka.actor.{Props, ActorRef, Actor}
+import akka.actor.{Actor, ActorRef, Props}
 import org.goldv.wampserver.message.Messages._
-import org.goldv.wampserver.server.{SubscriptionDispatchActor}
 import scala.util.Random
 
 /**
@@ -29,10 +28,14 @@ class ProtocolActor(source: ActorRef,  subscriptionActor: ActorRef) extends Acto
     case s: Subscribe => handleSubscribe(s)
     case s: Subscribed => handleSubscribed(s)
     case u: UnsubscribeWrapper => handleUnsubscribed(u)
+    case g: Goodbye => handleGoodbye(g)
     case m => log.error(s"received unhandled message $m ignoring")
   }
 
-  //override def preStart = subscriptionActor ! WAMPSubscriptionDispatchActor.Register( sessionId.getOrElse(0) )
+  def handleGoodbye(g: Goodbye) = {
+    sender ! g
+    context.stop(self)
+  }
 
   def handleSubscribed(s: Subscribed) = {
     subscriptionRoutes = subscriptionRoutes.updated(s.brokerId, sender())

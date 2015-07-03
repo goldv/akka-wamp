@@ -13,9 +13,19 @@
     connection.onopen = function (session) {
       console.log("session open")
 
+      var count = 0
       session.subscribe('com.myapp.hello', function(event){
-        console.log("event received " + event)
+        console.log("event received " + event + " count = " + count)
+        count++
+        //if(count == 9) connection.close()
       });
+    }
+
+    connection.onclose = function(reason, details){
+      console.log("closing")
+      console.log(reason)
+      console.log(details.message)
+      console.log(details.reason)
     }
 
     connection.open()

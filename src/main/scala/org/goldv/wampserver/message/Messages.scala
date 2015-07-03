@@ -9,6 +9,7 @@ object Messages {
 
   val HELLO_TYPE = 1
   val WELCOME_TYPE = 2
+  val GOODBYE_TYPE = 6
   val SUBSCRIBE_TYPE = 32
   val SUBSCRIBED_TYPE = 33
   val UNSUBSCRIBE_TYPE = 34
@@ -18,6 +19,7 @@ object Messages {
 
   sealed trait WAMPMessage
   case class Hello(realm: String, details: List[Role]) extends WAMPMessage
+  case class Goodbye(reason: String) extends WAMPMessage
   case class Welcome(session: Long, details: List[Role]) extends WAMPMessage
 
   case class Subscribe(id: Long, topic: String) extends WAMPMessage

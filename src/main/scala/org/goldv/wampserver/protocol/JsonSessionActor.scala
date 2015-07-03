@@ -19,17 +19,19 @@ class JsonSessionActor(sourceActor: ActorRef, subscriptionActor: ActorRef) exten
   }
 
   def receive: Receive = {
-    case js: JsArray => parser.parse(js) match{
-      case Right(message) =>
-        log.info(s"-> $message")
-        protocolActor ! message
-      case Left(err) => log.error(err)
-    }
+    case js: JsArray => handleIncoming(js)
+    case m:WAMPMessage => handleOutgoing(m)
     case JsonSessionActor.ConnectionClosed => protocolActor ! PoisonPill
-    case m:WAMPMessage =>
-      val outMessage = parser.write(m).toString()
-      log.info(s"<- $outMessage")
-      sourceActor ! TextMessage( outMessage )
+  }
+
+  def handleOutgoing(m:WAMPMessage) = {
+    val outMessage = parser.write(m).toString()
+    sourceActor ! TextMessage( outMessage )
+  }
+
+  def handleIncoming(js: JsArray) = parser.parse(js) match{
+    case Right(message) => protocolActor ! message
+    case Left(err) => log.error(err)
   }
 }
 
