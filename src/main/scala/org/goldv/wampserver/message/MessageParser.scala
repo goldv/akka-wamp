@@ -30,6 +30,7 @@ class JsonMessageParser extends MessageParser[JsArray] {
   def write(msg: WAMPMessage) = msg match{
     case m:Welcome => Json.toJson(m).as[JsArray]
     case s:Subscribed => Json.toJson(s).as[JsArray]
+    case e:Event => Json.toJson(e).as[JsArray]
     case _ => JsArray()
   }
 
@@ -103,5 +104,9 @@ object JsonMessageParser{
 
   implicit val unsubscribedWrites: Writes[Unsubscribed] = new Writes[Unsubscribed] {
     override def writes(u: Unsubscribed): JsValue = JsArray( Seq(JsNumber(Messages.UNSUBSCRIBED_TYPE), JsNumber(u.id)))
+  }
+
+  implicit val eventWrites: Writes[Event] = new Writes[Event]{
+    override def writes(e: Event): JsValue = JsArray( Seq(JsNumber(Messages.EVENT_TYPE), JsNumber(e.subId), JsNumber(e.pubId), Json.obj(), e.payload ))
   }
 }

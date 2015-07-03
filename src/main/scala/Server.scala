@@ -1,8 +1,10 @@
 import akka.http.scaladsl.server.Directives
-import org.goldv.wampserver.server.{PublisherContainer, WAMPSubscription, WAMPPublisher, WAMPServer}
+import org.goldv.wampserver.server._
 import play.api.libs.json.Json
 
+import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
 
 object Server extends App{
 
@@ -24,8 +26,12 @@ object Server extends App{
 
   val publisher = new WAMPPublisher[Test] {
     def baseTopic = "com.myapp"
-    def onSubscribe(sub: WAMPSubscription[Test]) = {
+    def onSubscribe(sub: WAMPSubscriber[Test]) = {
       println(s"subscription received ${sub.topic}")
+      val subscription = Await.result(sub.subscribed, 1 second)
+
+      (1 to 10).foreach( i => subscription.publish( Test("blah", i) ))
+
     }
     def onUnsubscribe(topic: String) = {
       println(s"unsubscribe for ")

@@ -25,6 +25,7 @@ class ProtocolActor(source: ActorRef,  subscriptionActor: ActorRef) extends Acto
   }
 
   def established: Receive = {
+    case e: Event => handleEvent(e)
     case s: Subscribe => handleSubscribe(s)
     case s: Subscribed => handleSubscribed(s)
     case u: UnsubscribeWrapper => handleUnsubscribed(u)
@@ -44,6 +45,8 @@ class ProtocolActor(source: ActorRef,  subscriptionActor: ActorRef) extends Acto
     subscriptionRoutes = subscriptionRoutes - u.brokerId
     source ! u.unsubscribed
   }
+
+  def handleEvent(e: Event) = source ! e
 
   def handleHello(h: Hello) = {
     // FIXME session id should be globally unique

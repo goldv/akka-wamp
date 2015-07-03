@@ -1,5 +1,7 @@
 package org.goldv.wampserver.server
 
+import java.util.concurrent.Executors
+
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.ws.{Message, TextMessage, UpgradeToWebsocket}
@@ -7,19 +9,19 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{ExpectedWebsocketRequestRejection, Route}
 import akka.stream.scaladsl._
 import akka.stream.{ActorMaterializer, OverflowStrategy}
+import org.goldv.wampserver.message.Messages.Publish
 import org.goldv.wampserver.protocol.JsonSessionActor
 import org.goldv.wampserver.protocol.JsonSessionActor.ConnectionClosed
 import org.slf4j.LoggerFactory
 import play.api.libs.json.{JsArray, JsSuccess, Json}
 
+import scala.concurrent.ExecutionContext
+import scala.util.Random
+
 /**
  * Created by goldv on 7/1/2015.
  */
-case class PublisherContainer[T](publisher: WAMPPublisher[T], writer: play.api.libs.json.Writes[T]){
-  def newSubscription(source: ActorRef, topic: String) = {
 
-  }
-}
 
 class WAMPServer(host: String, port: Int, wsPath: String, route: Option[Route] = None, publishers: List[PublisherContainer[_]]) {
 
@@ -73,5 +75,6 @@ class WAMPServer(host: String, port: Int, wsPath: String, route: Option[Route] =
 }
 
 object WAMPServer{
+    
   def apply(host: String, port: Int, wsPath: String, route: Option[Route] = None, publishers: List[PublisherContainer[_]] = Nil) = new WAMPServer(host, port, wsPath, route, publishers)
 }

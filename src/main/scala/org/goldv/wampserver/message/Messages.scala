@@ -1,5 +1,7 @@
 package org.goldv.wampserver.message
 
+import play.api.libs.json.JsValue
+
 /**
  * Created by goldv on 6/30/2015.
  */
@@ -11,6 +13,8 @@ object Messages {
   val SUBSCRIBED_TYPE = 33
   val UNSUBSCRIBE_TYPE = 34
   val UNSUBSCRIBED_TYPE = 35
+  val EVENT_TYPE = 36
+  val PUBLISH_TYPE = 16
 
   sealed trait WAMPMessage
   case class Hello(realm: String, details: List[Role]) extends WAMPMessage
@@ -23,4 +27,7 @@ object Messages {
   case class Unsubscribed(id: Long) extends WAMPMessage
 
   case class Role(name: String, features: Set[String])
+
+  case class Publish(id: Long, topic: String, json: JsValue) extends WAMPMessage
+  case class Event(id: Long, subId: Long, pubId: Long, payload: JsValue) extends  WAMPMessage
 }
