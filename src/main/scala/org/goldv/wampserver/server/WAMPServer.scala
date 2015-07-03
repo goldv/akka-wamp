@@ -1,7 +1,5 @@
 package org.goldv.wampserver.server
 
-import java.util.concurrent.Executors
-
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.ws.{Message, TextMessage, UpgradeToWebsocket}
@@ -10,20 +8,14 @@ import akka.http.scaladsl.server.{ExpectedWebsocketRequestRejection, Route}
 import akka.stream.scaladsl._
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import com.typesafe.config.Config
-import org.goldv.wampserver.message.Messages.Publish
 import org.goldv.wampserver.protocol.JsonSessionActor
 import org.goldv.wampserver.protocol.JsonSessionActor.ConnectionClosed
 import org.slf4j.LoggerFactory
 import play.api.libs.json.{JsArray, JsSuccess, Json}
 
-import scala.concurrent.ExecutionContext
-import scala.util.Random
-
 /**
  * Created by goldv on 7/1/2015.
  */
-
-
 class WAMPServer(host: String, port: Int, wsPath: String, route: Option[Route] = None, publishers: List[PublisherContainer[_]], config: Config) {
 
   val log = LoggerFactory.getLogger(classOf[WAMPServer])
@@ -67,18 +59,15 @@ class WAMPServer(host: String, port: Int, wsPath: String, route: Option[Route] =
     (sink, outSource)
   }
 
-  def handleWebsocketMessagesWithSyncSource(sink: Sink[Message, Any], source: Source[Message, Any]): Route =
-    optionalHeaderValueByType[UpgradeToWebsocket](){
+  def handleWebsocketMessagesWithSyncSource(sink: Sink[Message, Any], source: Source[Message, Any]): Route = {
+    optionalHeaderValueByType[UpgradeToWebsocket]() {
       case Some(upgrade) => complete(upgrade.handleMessagesWithSinkSource(sink, source, upgrade.requestedProtocols.headOption))
-      case None => {
-        println("rejecting")
-        reject(ExpectedWebsocketRequestRejection)
-      }
+      case None => reject(ExpectedWebsocketRequestRejection)
     }
+  }
 
 }
 
 object WAMPServer{
-
   def apply(host: String, port: Int, wsPath: String, route: Option[Route] = None, publishers: List[PublisherContainer[_]] = Nil, config: Config) = new WAMPServer(host, port, wsPath, route, publishers, config)
 }
