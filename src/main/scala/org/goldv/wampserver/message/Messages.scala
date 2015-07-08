@@ -1,5 +1,6 @@
 package org.goldv.wampserver.message
 
+import org.goldv.wampserver.server.PublicationEvent
 import play.api.libs.json.JsValue
 
 /**
@@ -30,6 +31,6 @@ object Messages {
 
   case class Role(name: String, features: Set[String])
 
-  case class Publish(id: Long, topic: String, json: JsValue) extends WAMPMessage
+  case class Publish(id: Long, topic: String, event: PublicationEvent) extends WAMPMessage
   case class Event(id: Long, subId: Long, pubId: Long, payload: JsValue) extends  WAMPMessage
 }

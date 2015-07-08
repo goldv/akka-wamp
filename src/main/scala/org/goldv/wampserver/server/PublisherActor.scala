@@ -2,14 +2,16 @@ package org.goldv.wampserver.server
 
 import akka.actor._
 import akka.util.Timeout
+import com.fasterxml.jackson.databind.JsonNode
 import org.goldv.wampserver.message.Messages._
 import org.goldv.wampserver.protocol.UnsubscribeWrapper
-import play.api.libs.json.Json
+import play.api.libs.json.{JsValue, Json}
 import akka.pattern.ask
 import scala.concurrent.Future
 import scala.util.Random
 import scala.concurrent._
 import scala.concurrent.duration._
+import play.api.libs.json.Writes.JsonNodeWrites
 
 /**
  * Created by goldv on 7/2/2015.
@@ -17,7 +19,7 @@ import scala.concurrent.duration._
 case class SubscribeRegistration(source: ActorRef, subscribe: Subscribe)
 case class SubscribedRegistration(subscribe: SubscribeRegistration, subscribed: Subscribed, publisher: ActorRef)
 
-class PublisherActor[T](publish: PublisherContainer[T], subscriptionDispatcher: ActorRef) extends Actor with ActorLogging with WAMPConfiguration{
+class PublisherActor[T](publish: PublisherContainer, subscriptionDispatcher: ActorRef) extends Actor with ActorLogging with WAMPConfiguration{
 
   val rdm = new Random()
 
@@ -67,8 +69,16 @@ class PublisherActor[T](publish: PublisherContainer[T], subscriptionDispatcher: 
   }
 
   def handlePublish(p: Publish) = {
+
+    // TODO cache this for future subscribers
+    val payload = Json.obj(
+      "dataType" -> p.event.dataType,
+      "key" -> p.event.id,
+      "data" -> Json.toJson( p.event.data )
+    )
+
     subscriptions.subscribersForTopic(p.topic).foreach{ case (subId, sr) =>
-      sr.source ! generateEvent(subId, p)
+      sr.source ! generateEvent(subId, p, payload)
     }
   }
 
@@ -76,7 +86,7 @@ class PublisherActor[T](publish: PublisherContainer[T], subscriptionDispatcher: 
     subscriptionDispatcher ! DispatchRegistration(publish.publisher.baseTopic, self)
   }
 
-  def generateEvent(subId: Long, p: Publish) = Event(rdm.nextInt(), subId, p.id, p.json)
+  def generateEvent(subId: Long, p: Publish, payload: JsValue) = Event(rdm.nextInt(), subId, p.id, payload)
 
   // FIXME broker id generation needs to be more robust
   def generateSubscribed(s: Subscribe) = Subscribed(s.id, rdm.nextInt())
@@ -84,26 +94,23 @@ class PublisherActor[T](publish: PublisherContainer[T], subscriptionDispatcher: 
 }
 
 object PublisherActor{
-  def apply[T](publish: PublisherContainer[T], subscriptionDispatchActor: ActorRef) = Props( new PublisherActor(publish, subscriptionDispatchActor) )
+  def apply(publish: PublisherContainer, subscriptionDispatchActor: ActorRef) = Props( new PublisherActor(publish, subscriptionDispatchActor) )
 }
 
-case class PublisherContainer[T](publisher: WAMPPublisher[T], writer: play.api.libs.json.Writes[T]){
+case class PublisherContainer(publisher: WAMPPublisher){
 
   val rdm = new Random()
   implicit val timeout = new Timeout(5 seconds)
 
-  def newSubscriber(sr: SubscribedRegistration) = new WAMPSubscriber[T]{
+  def newSubscriber(sr: SubscribedRegistration) = new WAMPSubscriber{
     def topic = sr.subscribe.subscribe.topic
-    def subscribed = (sr.publisher ? sr).mapTo[WAMPSubscription[T]]
-    def error(reason: String) = Future.successful( () )
+    def subscribed = Await.result( (sr.publisher ? sr).mapTo[WAMPSubscription], 2 seconds) // FIXME better to return the future
+    def error(reason: String) = ()
   }
 
-  def newSubscription(source: ActorRef, _topic: String) = new WAMPSubscription[T]{
+  def newSubscription(source: ActorRef, _topic: String) = new WAMPSubscription{
     def topic = _topic
-    def publish(event: T) = {
-      val json = Json.toJson(event)(writer)
-      source ! Publish(rdm.nextLong(), _topic, json)
-    }
+    def publish(event: PublicationEvent) = source ! Publish(rdm.nextLong(), _topic, event)
 
     def error(reason: String) = {
 

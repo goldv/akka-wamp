@@ -12,12 +12,14 @@
 
     connection.onopen = function (session) {
       console.log("session open")
+      subscribe("algotrader.marketdata.EURUSD", session)
+      subscribe("algotrader.marketdata.EURCHF", session)
+      subscribe("algotrader.marketdata.USDGBP", session)
+    }
 
-      var count = 0
-      session.subscribe('com.myapp.hello', function(event){
-        console.log("event received " + event + " count = " + count)
-        count++
-        //if(count == 9) connection.close()
+    function subscribe(topic, session){
+      session.subscribe(topic, function(event){
+        console.log("event received " + event + " topic = " + topic)
       });
     }
 

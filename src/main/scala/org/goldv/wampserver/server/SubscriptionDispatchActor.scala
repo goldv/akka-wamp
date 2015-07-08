@@ -17,7 +17,7 @@ class SubscriptionDispatchActor extends Actor with ActorLogging{
 
   def receive = {
     case dr: DispatchRegistration => publishers = publishers.updated(dr.baseTopic, dr.publisher)
-    case s: Subscribe => publisherForTopic(s.topic).foreach( _ ! SubscribeRegistration(sender(), s) )
+    case s: Subscribe => publishers.get(s.topic).foreach( _ ! SubscribeRegistration(sender(), s) )
   }
 
   def publisherForTopic(topic: String) = publisherForTopics( baseTopicsFromTopic(topic) )

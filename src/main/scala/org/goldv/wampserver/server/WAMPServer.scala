@@ -7,7 +7,6 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.{ExpectedWebsocketRequestRejection, Route}
 import akka.stream.scaladsl._
 import akka.stream.{ActorMaterializer, OverflowStrategy}
-import com.typesafe.config.Config
 import org.goldv.wampserver.protocol.JsonSessionActor
 import org.goldv.wampserver.protocol.JsonSessionActor.ConnectionClosed
 import org.slf4j.LoggerFactory
@@ -16,14 +15,28 @@ import play.api.libs.json.{JsArray, JsSuccess, Json}
 /**
  * Created by goldv on 7/1/2015.
  */
-class WAMPServer(host: String, port: Int, wsPath: String, route: Option[Route] = None, publishers: List[PublisherContainer[_]], config: Config) {
+class WAMPServer(host: String, port: Int, wsPath: String, publishers: List[PublisherContainer], rootResource: String, directoryResources: List[(String, String)]) {
+
+  def this(host: String, port: Int, wsPath: String, root: String) = this(host, port, wsPath, Nil, root, Nil)
 
   val log = LoggerFactory.getLogger(classOf[WAMPServer])
 
-  def register[T](publisher: WAMPPublisher[T], writer : play.api.libs.json.Writes[T]) = WAMPServer(host, port, wsPath, route, PublisherContainer[T](publisher, writer) :: publishers, config)
+  def register[T](publisher: WAMPPublisher) = new WAMPServer(host, port, wsPath, PublisherContainer(publisher) :: publishers, rootResource, directoryResources )
+  def withRootResource(fileName: String) = new WAMPServer(host, port, wsPath, publishers, rootResource, directoryResources )
+  def withDirResource(path: String, dirName: String) = new WAMPServer(host, port, wsPath, publishers, rootResource, path -> dirName :: directoryResources )
+
+  val rootRoute = pathSingleSlash {
+    getFromResource(rootResource)
+  }
+
+  val dirRoutes = directoryResources.map{ case (prefix, dir) =>
+    pathPrefix(prefix) {
+      getFromResourceDirectory(dir)
+    }
+  }
 
   def bind() = {
-    implicit val system = ActorSystem("wamp", config)
+    implicit val system = ActorSystem("wamp")
     implicit val materializer = ActorMaterializer()
     import system.dispatcher
 
@@ -39,7 +52,7 @@ class WAMPServer(host: String, port: Int, wsPath: String, route: Option[Route] =
       }
     }
 
-    val finalRoute = route.foldRight(wsRoute)( _ ~ _ )
+    val finalRoute = dirRoutes.foldRight(wsRoute)(_ ~ _) ~ rootRoute
     Http().bindAndHandle(finalRoute, host, port).map{ serverBinding =>
       () => serverBinding.unbind().onComplete( _ => system.shutdown() )
     }
@@ -68,6 +81,4 @@ class WAMPServer(host: String, port: Int, wsPath: String, route: Option[Route] =
 
 }
 
-object WAMPServer{
-  def apply(host: String, port: Int, wsPath: String, route: Option[Route] = None, publishers: List[PublisherContainer[_]] = Nil, config: Config) = new WAMPServer(host, port, wsPath, route, publishers, config)
-}
+
