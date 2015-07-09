@@ -4,6 +4,6 @@ This is a WAMP broker ( subscription part and not RPC ) base on AKKA streams/htt
 
 To run:
 
-'''
+```
 mvn compile exec:java
-'''
+```
