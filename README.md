@@ -12,4 +12,4 @@ This will run the com.goldv.wampserver.ServerTest which provides pubblishers for
 
 You can then navigate to:
 
-[localhost:9090](localhost:9090)
+[localhost:9090](http://localhost:9090)
