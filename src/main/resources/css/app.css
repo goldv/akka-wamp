@@ -1,0 +1,117 @@
+body {
+  padding-top: 50px;
+}
+.starter-template {
+  padding: 40px 15px;
+  text-align: center;
+}
+
+.panel{
+  margin-top: 50px;
+}
+
+.last-positive {
+    background: green;
+    color: #FFFFFF;
+}
+
+.last-negative {
+    background: red;
+    color: #FFFFFF;
+}
+
+.change-negative {
+    color: red;
+}
+
+@keyframes positive-anim {
+    25%  {background-color: lightgreen; opacity: 0.35}
+    50%  {background-color: lightgreen; opacity: 0.7}
+    60%  {background-color: lightgreen; opacity: 0.7}
+    70%  {background-color: lightgreen; opacity: 0.5}
+    80%  {background-color: lightgreen; opacity: 0.3}
+    90%  {background-color: lightgreen; opacity: 0.1}
+}
+
+/* The element to apply the animation to */
+.change{
+    -webkit-animation-name: positive-anim;
+    -webkit-animation-duration: 0.4s;
+}
+
+.market-data-header{
+    padding: 5px;
+}
+
+.market-data-header .search-box{
+    padding: 0px;
+}
+
+.market-data{
+    position: relative;
+    background: #2a2c39;
+}
+
+.market-data .security-color{
+    color: #0099d4;
+}
+
+.market-data .value-color{
+    color: white;
+}
+
+.market-data .change-color-positive{
+    color: green;
+}
+
+.market-data .change-color-negative{
+    color: red;
+}
+
+.container {
+    width: 552px;
+}
+
+.inner-addon {
+    position: relative;
+}
+
+/* style icon */
+.inner-addon .glyphicon {
+    position: absolute;
+    padding: 10px;
+    pointer-events: none;
+}
+
+/* align icon */
+.right-addon .glyphicon { right: 0px;}
+
+/* add padding  */
+.right-addon input { padding-right: 30px; }
+
+.config-screen{
+    width: 100%;
+    height: 0px;
+    position: absolute;
+    background-color: #65687D;
+    opacity: 0.95;
+    z-index: 2;
+    -webkit-box-shadow: 2px 2px 5px 0px rgba(0,0,0,0.25);
+    -moz-box-shadow: 2px 2px 5px 0px rgba(0,0,0,0.25);
+    box-shadow: 2px 2px 5px 0px rgba(0,0,0,0.25);
+    overflow: hidden;
+    transition: height 0.2s , padding 0.2s;
+}
+
+.show-config{
+    height: 100%;
+    padding: 5px;
+}
+
+.hide-config{
+    height: 0px;
+}
+
+.config-screen .form-group{
+    margin-bottom: 2px;
+}

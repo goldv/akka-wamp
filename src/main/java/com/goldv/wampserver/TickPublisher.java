@@ -7,6 +7,8 @@ import org.goldv.wampserver.server.WAMPPublisher;
 import org.goldv.wampserver.server.WAMPSubscriber;
 import org.goldv.wampserver.server.WAMPSubscription;
 
+import java.math.BigDecimal;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -19,10 +21,12 @@ public class TickPublisher implements WAMPPublisher{
   private final String topic;
   private final ScheduledExecutorService scheduler;
   private final Random rdm = new Random();
+  private final List<String> symbols;
 
-  public TickPublisher(String topic, ScheduledExecutorService scheduler){
+  public TickPublisher(String topic, ScheduledExecutorService scheduler, List<String> symbols){
     this.topic = topic;
     this.scheduler = scheduler;
+    this.symbols = symbols;
   }
 
   public String topic(){
@@ -34,8 +38,10 @@ public class TickPublisher implements WAMPPublisher{
 
     WAMPSubscription subscription = sub.subscribed();
 
-    long delay = (long)(500 + (1000 * rdm.nextDouble()) );
-    scheduler.scheduleAtFixedRate(new SubscriptionPublisher(subscription), 0, delay, TimeUnit.MILLISECONDS);
+    for(String symbol : symbols){
+      long delay = (long)(3000 + (5000 * rdm.nextDouble()) );
+      scheduler.scheduleAtFixedRate(new SubscriptionPublisher(subscription, symbol), 0, delay, TimeUnit.MILLISECONDS);
+    }
   }
 
   public void onUnsubscribe(String topic){
@@ -61,19 +67,25 @@ public class TickPublisher implements WAMPPublisher{
     private final WAMPSubscription subscription;
     private final Random rdm = new Random();
     private final ObjectMapper mapper = new ObjectMapper();
+    private final String symbol;
 
-    public SubscriptionPublisher(WAMPSubscription subscription) {
+    public SubscriptionPublisher(WAMPSubscription subscription, String symbol) {
       this.subscription = subscription;
+      this.symbol = symbol;
     }
 
     @Override
     public void run() {
-      JsonNode json = mapper.valueToTree(generate(subscription.topic()));
-      subscription.publish(new PublicationEvent(subscription.topic(), "tick", false, json));
+      JsonNode json = mapper.valueToTree(generate(symbol));
+      subscription.publish(new PublicationEvent(symbol, "tick", false, json));
+    }
+
+    private double roundedRandom(){
+      return new BigDecimal(rdm.nextDouble()).setScale(4,BigDecimal.ROUND_HALF_UP).doubleValue();
     }
 
     private Tick generate(String symbol){
-      return new Tick(symbol, rdm.nextDouble(), rdm.nextDouble(), rdm.nextDouble());
+      return new Tick(symbol,roundedRandom() , roundedRandom(), roundedRandom());
     }
   }
 }

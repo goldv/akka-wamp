@@ -1,40 +1,36 @@
-<html>
-<head>
 
-  <script type="text/javascript" src="js/autobahn.js"></script>
-</head>
-<body>
-  <script>
-    var connection = new autobahn.Connection({
-      url: 'ws://localhost:9090/ws-greeter',
-      realm: 'realm1'
-    });
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="">
+    <meta name="author" content="">
 
-    connection.onopen = function (session) {
-      console.log("session open")
-      subscribe("algotrader.marketdata.EURUSD", session)
-      subscribe("algotrader.marketdata.EURCHF", session)
-      subscribe("algotrader.marketdata.USDGBP", session)
-    }
+    <title>Market Data Ticker</title>
 
-    function subscribe(topic, session){
-      session.subscribe(topic, function(event){
-        console.log("event received " + event + " topic = " + topic)
-      });
-    }
-
-    connection.onclose = function(reason, details){
-      console.log("closing")
-      console.log(reason)
-      console.log(details.message)
-      console.log(details.reason)
-    }
-
-    connection.open()
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
 
 
-  </script>
-</body>
+    <link href="/css/app.css" rel="stylesheet">
+    
+  </head>
 
+  <body>
 
+    <div class="container">
+        <div id="main"></div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="js/autobahn.js"></script>
+    <script src="/js/react-with-addons.js"></script>
+    <script src="/js/JSXTransformer.js"></script>
+
+    <script type="text/jsx" language="javascript" src="/js/app.js"></script>
+    <script type="text/javascript" language="javascript" src="/js/feed.js"></script>
+  </body>
 </html>

@@ -3,6 +3,8 @@ package com.goldv.wampserver;
 import org.goldv.wampserver.server.WAMPServer;
 import scala.Console;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -15,11 +17,15 @@ public class ServerTest {
 
     ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
+    List<String> symbols = new ArrayList<>();
+    symbols.add("EURUSD");
+    symbols.add("EURCHF");
+    symbols.add("USDGBP");
+
     WAMPServer server = new WAMPServer("localhost", 9090,"ws-greeter", "index.html")
-      .register( new TickPublisher("algotrader.marketdata.EURUSD", scheduler) )
-      .register(new TickPublisher("algotrader.marketdata.EURCHF", scheduler))
-      .register( new TickPublisher("algotrader.marketdata.USDGBP", scheduler) )
-      .withDirResource("js", "js");
+      .register( new TickPublisher("algotrader.marketdata", scheduler, symbols) )
+      .withDirResource("js", "js")
+      .withDirResource("css", "css");
 
     server.bind();
 
