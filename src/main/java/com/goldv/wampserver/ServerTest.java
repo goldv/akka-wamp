@@ -24,6 +24,7 @@ public class ServerTest {
 
     WAMPServer server = new WAMPServer("localhost", 9090,"ws-greeter", "index.html")
       .register( new TickPublisher("algotrader.marketdata", scheduler, symbols) )
+      .register( new OrderPublisher(scheduler, "algotrader.order.strategy1") )
       .withDirResource("js", "js")
       .withDirResource("css", "css");
 

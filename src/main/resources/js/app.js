@@ -109,8 +109,13 @@ var MarketDataTable = React.createClass({
     getInitialState: function() {
         var instruments = {};
         feed.watch(this.props.watch, function(instrument) {
-            console.log("instrument received " + instrument)
-            instruments[instrument.data.symbol] = instrument.data;
+            console.log("instrument received " + instrument.isFinal)
+            if(instrument.isFinal){
+                delete instruments[instrument.data.symbol];
+            } else {
+                instruments[instrument.data.symbol] = instrument.data;
+            }
+
             this.setState({instruments: instruments});
         }.bind(this));
 
@@ -184,12 +189,16 @@ var MarketDataTable = React.createClass({
     }
 });
 
-var columns = [{name: "symbol", dynamic: false},
+var marketDataColumns = [{name: "symbol", dynamic: false},
         {name:"bid", dynamic: true},
         {name:"ask", dynamic: true},
         {name:"volume", dynamic: true}]
 
-var watch = ["algotrader.marketdata"]
+React.render(<MarketDataTable columns={marketDataColumns} watch={["algotrader.marketdata"]}/>, document.getElementById('marketdata'));
 
+var orderColumns = [{name: "symbol", dynamic: false},
+    {name:"orderType", dynamic: false},
+    {name:"size", dynamic: false},
+    {name:"status", dynamic: true}]
 
-React.render(<MarketDataTable columns={columns} watch={watch}/>, document.getElementById('main'));
+React.render(<MarketDataTable columns={orderColumns} watch={ ["algotrader.order.strategy1"] }/>, document.getElementById('orders'));

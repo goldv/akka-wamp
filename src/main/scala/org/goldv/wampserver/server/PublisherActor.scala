@@ -36,6 +36,7 @@ class PublisherActor[T](publish: PublisherContainer, subscriptionDispatcher: Act
       subscriptions.subscribed(sr.subscribed.brokerId)
       sender() ! publish.newSubscription(self, sr.subscribe.subscribe.topic) // send subscription back to client api
       sr.subscribe.source ! sr.subscribed // confirm the subscription to the subscriber
+      publicationCache.values.foreach( payload => sr.subscribe.source ! generateEvent(sr.subscribed.brokerId, rdm.nextLong(), payload )) // notify with cached values
     case u: Unsubscribe =>
       handleUnsubscribe(sender(), u.subId)
       sender() ! UnsubscribeWrapper( u.subId, Unsubscribed(u.id) )
