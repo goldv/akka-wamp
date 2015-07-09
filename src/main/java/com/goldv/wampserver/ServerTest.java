@@ -30,7 +30,7 @@ public class ServerTest {
 
     server.bind();
 
-    System.out.println("Server online at http://localhost:8080/\nPress RETURN to stop...");
+    System.out.println("Server online at http://localhost:9090/\nPress RETURN to stop...");
     Console.readLine();
 
   }
