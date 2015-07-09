@@ -25,7 +25,7 @@ public class TickPublisher implements WAMPPublisher{
     this.scheduler = scheduler;
   }
 
-  public String baseTopic(){
+  public String topic(){
     return topic;
   }
 
@@ -69,7 +69,7 @@ public class TickPublisher implements WAMPPublisher{
     @Override
     public void run() {
       JsonNode json = mapper.valueToTree(generate(subscription.topic()));
-      subscription.publish(new PublicationEvent(subscription.topic(), "tick", json));
+      subscription.publish(new PublicationEvent(subscription.topic(), "tick", false, json));
     }
 
     private Tick generate(String symbol){

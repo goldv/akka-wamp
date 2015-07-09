@@ -11,7 +11,7 @@ public class OrderPublisher implements WAMPPublisher {
   //private final String topic;
 
   @Override
-  public String baseTopic() {
+  public String topic() {
     return null;
   }
 

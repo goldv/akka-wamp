@@ -2,10 +2,9 @@ package org.goldv.wampserver.server
 
 import akka.actor._
 import akka.util.Timeout
-import com.fasterxml.jackson.databind.JsonNode
 import org.goldv.wampserver.message.Messages._
 import org.goldv.wampserver.protocol.UnsubscribeWrapper
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{JsObject, JsValue, Json}
 import akka.pattern.ask
 import scala.concurrent.Future
 import scala.util.Random
@@ -23,15 +22,16 @@ class PublisherActor[T](publish: PublisherContainer, subscriptionDispatcher: Act
 
   val rdm = new Random()
 
+  var publicationCache = Map.empty[(String, String), JsObject]
+
   var subscriptions = SubscriptionContainer()
 
   def receive = {
     case p: Publish =>
       handlePublish(p)
     case sr: SubscribeRegistration =>
-      val subscribed = handleSubscribe(sr)
       context.watch(sr.source)
-      notifySubscriber( SubscribedRegistration(sr, subscribed, self) )
+      handleSubscribe(sr)
     case sr: SubscribedRegistration =>
       subscriptions.subscribed(sr.subscribed.brokerId)
       sender() ! publish.newSubscription(self, sr.subscribe.subscribe.topic) // send subscription back to client api
@@ -45,15 +45,17 @@ class PublisherActor[T](publish: PublisherContainer, subscriptionDispatcher: Act
     }
   }
 
-  def handleSubscribe(sr: SubscribeRegistration): Subscribed = {
+  def handleSubscribe(sr: SubscribeRegistration) = {
     val subscribed = generateSubscribed(sr.subscribe)
     subscriptions = subscriptions.subscribe(subscribed.brokerId, sr)
-    if (subscriptions.countForTopic(sr.subscribe.topic) == 1) {
-      val subscription = publish.newSubscription(self, sr.subscribe.topic)
-      log.info(s"sub base topic: ${publish.publisher.baseTopic} topic: ${sr.subscribe.topic}")
+    if (subscriptions.count == 1) {
+      // first subscription, request from data source
+      notifySubscriber(SubscribedRegistration(sr, subscribed, self))
+    } else {
+      // already subscribed to data source, return subscribed and publish cache contents
+      sr.source ! subscribed
+      publicationCache.values.foreach( payload => sr.source ! generateEvent(subscribed.brokerId, rdm.nextLong(), payload ))
     }
-
-    subscribed
   }
 
   def notifySubscriber(sr: SubscribedRegistration): Future[Unit] = Future{
@@ -61,32 +63,43 @@ class PublisherActor[T](publish: PublisherContainer, subscriptionDispatcher: Act
     publish.publisher.onSubscribe(subscriber)
   }(apiExecutionContext)
 
-  def handleUnsubscribe(source: ActorRef, subId: Long) = subscriptions.topicFor(source, subId).foreach{ topic =>
+  def handleUnsubscribe(source: ActorRef, subId: Long) = {
     subscriptions = subscriptions.unsubscribe(source, subId)
-    if(subscriptions.countForId(sender(), subId) == 0) {
-      log.info(s"unsub base topic:  ${publish.publisher.baseTopic} topic: $topic")
+    if(subscriptions.count == 0) {
+      // TODO notify subscriber
+      log.info(s"unsub topic:  ${publish.publisher.topic}")
     }
   }
 
   def handlePublish(p: Publish) = {
 
-    // TODO cache this for future subscribers
-    val payload = Json.obj(
-      "dataType" -> p.event.dataType,
-      "key" -> p.event.id,
-      "data" -> Json.toJson( p.event.data )
-    )
+    val payload = buildPayload(p.event)
+    val cacheKey = (p.event.dataType, p.event.id)
 
-    subscriptions.subscribersForTopic(p.topic).foreach{ case (subId, sr) =>
-      sr.source ! generateEvent(subId, p, payload)
+    if(p.event.isFinal){
+      publicationCache = publicationCache - cacheKey
+    } else {
+      // cache for future subscribers to receive first update
+      publicationCache = publicationCache.updated( cacheKey, payload )
+    }
+
+    subscriptions.subscribers.foreach{ case (subId, sr) =>
+      sr.source ! generateEvent(subId, p.id, payload)
     }
   }
 
   override def preStart() = {
-    subscriptionDispatcher ! DispatchRegistration(publish.publisher.baseTopic, self)
+    subscriptionDispatcher ! DispatchRegistration(publish.publisher.topic, self)
   }
 
-  def generateEvent(subId: Long, p: Publish, payload: JsValue) = Event(rdm.nextInt(), subId, p.id, payload)
+  def generateEvent(subId: Long, pubId: Long, payload: JsValue) = Event(rdm.nextInt(), subId, pubId, payload)
+
+  def buildPayload(event: PublicationEvent) = Json.obj(
+    "dataType" -> event.dataType,
+    "key" -> event.id,
+    "isFinal" -> event.isFinal,
+    "data" -> Json.toJson( event.data )
+  )
 
   // FIXME broker id generation needs to be more robust
   def generateSubscribed(s: Subscribe) = Subscribed(s.id, rdm.nextInt())
@@ -113,26 +126,22 @@ case class PublisherContainer(publisher: WAMPPublisher){
     def publish(event: PublicationEvent) = source ! Publish(rdm.nextLong(), _topic, event)
 
     def error(reason: String) = {
-
+      // TODO
     }
   }
 }
 
-class SubscriptionContainer(actorSubs: Map[ActorRef, Map[Long, Subscribe]], topicSubs: Map[String, Map[Long, SubscribeRegistration]], subscribedSet: Set[Long]){
+class SubscriptionContainer(actorSubs: Map[ActorRef, Map[Long, Subscribe]], subs: Map[Long, SubscribeRegistration]){
 
-  def subscribe(id: Long, s: SubscribeRegistration): SubscriptionContainer = {
-    val idToSub = actorSubs.getOrElse(s.source, Map.empty[Long, Subscribe])
-    val subMap = topicSubs.getOrElse(s.subscribe.topic, Map.empty[Long, SubscribeRegistration]) + (id -> s)
-    SubscriptionContainer(actorSubs.updated( s.source, idToSub.updated(id, s.subscribe) ), topicSubs.updated(s.subscribe.topic, subMap), subscribedSet )
-  }
-
-  def subscribed(id: Long) = SubscriptionContainer(actorSubs, topicSubs, subscribedSet + id)
+  def subscribed(id: Long) = SubscriptionContainer(actorSubs, subs )
 
   def unsubscribe(sender: ActorRef, id: Long): SubscriptionContainer = deleteSub(sender, id).getOrElse(this)
 
   def subscriptionsFor(sender: ActorRef) = actorSubs.get(sender).map(_.keys.toList).getOrElse(Nil)
 
-  def subscribersForTopic(topic: String) = topicSubs.getOrElse(topic, Map.empty[Long, SubscribeRegistration])
+  def subscribers = subs
+
+  def count: Int = subs.size
 
   def unsubscribesFor(sender: ActorRef) = {
     val unsubscribes = for{
@@ -142,33 +151,20 @@ class SubscriptionContainer(actorSubs: Map[ActorRef, Map[Long, Subscribe]], topi
     unsubscribes.getOrElse(Nil)
   }
 
-  def countForTopic(topic: String): Int = topicSubs.get(topic).map(_.size).getOrElse(0)
-
-  def countForId(sender: ActorRef, id: Long): Int = {
-    val count = for{
-      topic <- topicFor(sender, id)
-      subsForTopic <- topicSubs.get(topic)
-    } yield subsForTopic.size
-
-    count.getOrElse(0)
+  def subscribe(id: Long, s: SubscribeRegistration): SubscriptionContainer = {
+    val idToSub = actorSubs.getOrElse(s.source, Map.empty[Long, Subscribe])
+    SubscriptionContainer(actorSubs.updated( s.source, idToSub.updated(id, s.subscribe) ), subs.updated(id, s) )
   }
-
-  def topicFor(sender: ActorRef, id: Long) = for {
-    idToSub <- actorSubs.get(sender)
-    topic <- idToSub.get(id).map(_.topic)
-  } yield topic
 
   private def deleteSub(sender: ActorRef, id: Long) = for {
     idToSub <- actorSubs.get(sender)
     sub <- idToSub.get(id)
-    topicMap <- topicSubs.get(sub.topic)
   } yield {
-    SubscriptionContainer(actorSubs.updated(sender,idToSub - id), topicSubs.updated(sub.topic, topicMap - id), subscribedSet - id )
+    SubscriptionContainer(actorSubs.updated(sender,idToSub - id), subs - id )
   }
-
 }
 
 object SubscriptionContainer{
-  def apply() = new SubscriptionContainer(Map.empty[ActorRef,Map[Long, Subscribe]], Map.empty[String, Map[Long, SubscribeRegistration]], Set.empty[Long])
-  def apply(actorSubs: Map[ActorRef, Map[Long, Subscribe]], topicSubs: Map[String, Map[Long, SubscribeRegistration]], subscribed: Set[Long]) = new SubscriptionContainer(actorSubs, topicSubs, subscribed)
+  def apply() = new SubscriptionContainer(Map.empty[ActorRef,Map[Long, Subscribe]], Map.empty[Long, SubscribeRegistration])
+  def apply(actorSubs: Map[ActorRef, Map[Long, Subscribe]], subs: Map[Long, SubscribeRegistration]) = new SubscriptionContainer(actorSubs, subs)
 }

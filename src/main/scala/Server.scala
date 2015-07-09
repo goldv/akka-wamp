@@ -28,7 +28,7 @@ object Server extends App{
   val testWrites = Json.writes[Test]
 
   val publisher = new WAMPPublisher {
-    def baseTopic = "com.myapp"
+    def topic = "com.myapp"
     def onSubscribe(sub: WAMPSubscriber) = {
       println(s"subscription received ${sub.topic}")
       val subscription = sub.subscribed
@@ -38,7 +38,7 @@ object Server extends App{
       (1 to 10).foreach{ i =>
         val json: JsonNode = mapper.valueToTree( Test("blah", i))
 
-        val pe = new PublicationEvent("test", "key", json)
+        val pe = new PublicationEvent("test", "key", false, json)
 
         subscription.publish( pe )
       }

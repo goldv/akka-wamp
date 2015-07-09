@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode
 /**
  * Created by goldv on 7/2/2015.
  */
-class PublicationEvent(val id: String, val dataType: String, val data: JsonNode)
+class PublicationEvent(val id: String, val dataType: String, val isFinal: Boolean, val data: JsonNode)
 
 trait WAMPSubscriber{
   def topic: String
@@ -20,7 +20,7 @@ trait WAMPSubscription{
 }
 
 trait WAMPPublisher{
-  def baseTopic: String
+  def topic: String
   def onSubscribe(sub: WAMPSubscriber)
   def onUnsubscribe(topic: String)
 }
