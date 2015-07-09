@@ -1,6 +1,6 @@
 # akka-wamp
 
-This is a [WAMP](http://wamp.ws/) broker ( subscription part and not RPC ) base on AKKA streams/http. For the front end I'm using the (autobahn)[http://autobahn.ws/js/] implementation of WAMP.
+This is a [WAMP](http://wamp.ws/) broker ( subscription part and not RPC ) base on AKKA streams/http. For the front end I'm using the [autobahn](http://autobahn.ws/js/) implementation of WAMP.
 
 To run:
 
