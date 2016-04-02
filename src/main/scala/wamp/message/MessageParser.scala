@@ -1,29 +1,29 @@
-package org.goldv.wampserver.message
+package wamp.message
 
-import org.goldv.wampserver.message.Messages._
+import Messages._
 import play.api.libs.json._
+import wamp.message.Messages._
+
+import scala.util.{Success, Failure, Try}
 
 /**
  * Created by goldv on 6/30/2015.
  */
-trait MessageParser[T]{
-  def parse(in: T):  Either[String, WAMPMessage]
-  def write(m: WAMPMessage): T
-}
 
-class JsonMessageParser extends MessageParser[JsArray] {
 
-  import JsonMessageParser._
+object MessageParser{
 
-  def parse(arr: JsArray): Either[String, WAMPMessage] = {
+  val messageTypeTransformer = __(0).json.pick[JsNumber]
+
+  def parse(arr: JsArray): Try[WAMPMessage] = {
     val result = for{
       messageType <- arr.transform(messageTypeTransformer)
       wampMessage <- parseType(messageType.value.intValue(), arr)
     } yield wampMessage
 
     result match{
-      case JsSuccess(message, _) => Right(message)
-      case JsError(err) => Left(s"Unable to retrieve message type id from ${arr} error: ${err}")
+      case JsSuccess(message, _) => Success(message)
+      case JsError(err) => Failure(new Exception(s"Unable to retrieve message type id from ${arr} error: ${err}"))
     }
   }
 
@@ -82,11 +82,6 @@ class JsonMessageParser extends MessageParser[JsArray] {
     case JsSuccess(features, _ ) => features.value.collect{ case (feature: String, JsBoolean(true)) => feature}.toSet
     case JsError(err) => Set.empty[String]
   }
-}
-
-object JsonMessageParser{
-
-  val messageTypeTransformer = __(0).json.pick[JsNumber]
 
   implicit val roleWrite: Writes[Role] = new Writes[Role]{
     override def writes(r: Role): JsValue = {

@@ -1,6 +1,7 @@
-package com.goldv.wampserver.message
+package wamp.message
 
-import org.goldv.wampserver.message.Messages.{Welcome, Role, Hello}
+import wamp.message.Messages
+import Messages.{Welcome, Role, Hello}
 
 /**
  * Created by goldv on 7/1/2015.
