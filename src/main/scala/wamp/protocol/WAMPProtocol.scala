@@ -140,11 +140,12 @@ object WAMPSubscription{
       } else List.empty[WAMPMessage]
     }
 
-    def handlePublish(p: Publish) = TopicUtils.wildcardTopicsFromTopic(p.topic)
-      .filter(subscriptions.contains)
-      .map( topic => Event(subscriptions(topic).brokerId, lastPublicationId, p.payload))
-
-    def containsSubscription(topic: String) = (TopicUtils.wildcardTopicsFromTopic(topic) & subscriptions.keySet).size >= 1
+    def handlePublish(p: Publish) = {
+      lastPublicationId += 1
+      TopicUtils.wildcardTopicsFromTopic(p.topic)
+        .filter(subscriptions.contains)
+        .map( topic => Event(subscriptions(topic).brokerId, lastPublicationId, p.payload))
+    }
 
     msg: WAMPMessage => msg match{
       case s:Subscribe => handleSubscribe(s)
