@@ -5,11 +5,11 @@ import akka.event.{SubchannelClassification, EventBus}
 import akka.http.scaladsl.model.ws.{TextMessage, Message}
 import akka.stream.BidiShape
 import akka.util.Subclassification
+import spray.json.{JsArray, JsonParser}
 import wamp.message.{Messages, MessageParser}
 import Messages._
 import wamp.message.{Messages, MessageParser}
 import MessageParser.{write, parse}
-import play.api.libs.json.{JsSuccess, JsArray, Json}
 import akka.stream.scaladsl.GraphDSL.Implicits._
 import akka.stream.scaladsl._
 import wamp.message.Messages._
@@ -23,14 +23,14 @@ object WAMPProtocol {
     .atop(WAMPSubscription.subscription)
 
   def readMessage(msg: Message): Try[WAMPMessage] = msg match{
-    case tm:TextMessage.Strict => parseArray(tm.text).flatMap(parse)
+    case tm:TextMessage.Strict => parseArray(tm.text)
     case _ => Failure(new Exception("Unable to parse binary message"))
   }
 
   def writeMessage(msg: WAMPMessage): Message = TextMessage( write(msg).toString() )
 
-  def parseArray(msg: String) = Json.fromJson[JsArray](Json.parse(msg)) match{
-    case JsSuccess(arr, _) => Success(arr)
+  def parseArray(msg: String) = Try(JsonParser(msg)) match{
+    case Success(a:JsArray) => parse(a)
     case _ => Failure(new Exception(s"Unable to parse $msg to array"))
   }
 

@@ -1,8 +1,7 @@
 package wamp.message
 
 import org.scalatest.{FlatSpec, Matchers}
-import play.api.libs.json.{JsArray, Json}
-import wamp.message.MessageParser
+import spray.json.JsonParser
 
 import scala.util.Success
 
@@ -11,18 +10,16 @@ import scala.util.Success
  */
 class JsonParserSpec extends FlatSpec with Matchers with JsonTestMessages{
 
-  import MessageParser._
-
   val parser = MessageParser
 
   "hello parser" should "parse hello message with populated roles" in{
-      assert( MessageParser.parse(Json.parse(helloCompleteJson).as[JsArray]) ==  Success(helloComplete) )
+      assert( MessageParser.parse(JsonParser(helloCompleteJson)) ==  Success(helloComplete) )
   }
   "hello parser" should  "parse hello with empty features" in {
-      assert( MessageParser.parse(Json.parse(helloEmptyFeaturesJson).as[JsArray]) == Success( helloEmptyFeatures ) )
+      assert( MessageParser.parse(JsonParser(helloEmptyFeaturesJson)) == Success( helloEmptyFeatures ) )
   }
   "hello parser" should "write welcome json message" in{
-      assert( Json.toJson(welcomeBrokerRole) ==  Json.parse(welcomeBrokerRoleJson) )
+      assert( Success(welcomeBrokerRole) ==  MessageParser.parse(JsonParser(welcomeBrokerRoleJson)) )
   }
 
 }

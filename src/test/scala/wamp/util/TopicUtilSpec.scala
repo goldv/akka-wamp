@@ -1,7 +1,6 @@
 package wamp.util
 
-import org.scalatest.{Matchers, FlatSpec}
-import wamp.util.TopicUtils
+import org.scalatest.{FlatSpec, Matchers}
 
 /**
  * Created by goldv on 7/2/2015.

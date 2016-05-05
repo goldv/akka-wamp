@@ -1,7 +1,6 @@
 package wamp.message
 
-import wamp.message.Messages
-import Messages.{Welcome, Role, Hello}
+import wamp.message.Messages.{Hello, Role, Welcome}
 
 /**
  * Created by goldv on 7/1/2015.
